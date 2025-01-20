@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include "common.h"
+#include "stddef.h"
 
 /**
  * @brief LetterBox
@@ -33,6 +34,16 @@ int read_image(const char* path, image_buffer_t* image);
  * @param image [in] Image for write (only support IMAGE_FORMAT_RGB888)
  * @return int 0: success; -1: error
  */
+
+ /**
+ * @brief Read image from a raw byte buffer (e.g., JPEG/PNG) and store it in an image buffer.
+ * 
+ * @param img_data [in] Pointer to the raw image data buffer (e.g., JPEG/PNG bytes)
+ * @param img_size [in] Size of the raw image data buffer
+ * @param image [out] Pointer to the image_buffer_t structure where the decompressed image data will be stored
+ * @return int 0: success; -1: error
+ */
+int read_image_from_buffer(const unsigned char* img_data, size_t img_size, image_buffer_t* image);
 int write_image(const char* path, const image_buffer_t* image);
 
 /**

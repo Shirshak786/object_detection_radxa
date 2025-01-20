@@ -20,6 +20,8 @@
 
 #include "image_utils.h"
 #include "file_utils.h"
+#include "stddef.h"
+
 
 static const char* filter_image_names[] = {
     "jpg",
@@ -145,6 +147,63 @@ out:
     }
     return 0;
 }
+
+
+int read_image_from_buffer(const unsigned char* img_data, size_t img_size, image_buffer_t* image) {
+    tjhandle handle = NULL;
+    int width, height;
+    int subsample, colorspace;
+    unsigned char* sw_out_buf = NULL;
+    int pixelFormat = TJPF_RGB;  // RGB format for decompression
+    int ret = 0;
+    
+    // Initialize TurboJPEG decompressor
+    handle = tjInitDecompress();
+    if (handle == NULL) {
+        printf("Failed to initialize TurboJPEG decompressor: %s\n", tjGetErrorStr());
+        return -1;
+    }
+
+    // Get JPEG image info (header information)
+    ret = tjDecompressHeader3(handle, img_data, img_size, &width, &height, &subsample, &colorspace);
+    if (ret < 0) {
+        printf("Failed to read JPEG header: %s\n", tjGetErrorStr());
+        tjDestroy(handle);
+        return -1;
+    }
+
+    printf("Decoded image size: %d x %d, subsampling: %d, colorspace: %d\n", width, height, subsample, colorspace);
+
+    // Allocate memory for the decompressed image data (RGB format)
+    int sw_out_size = width * height * 3;  // Assuming 3 channels (RGB)
+    sw_out_buf = (unsigned char*)malloc(sw_out_size);
+    if (sw_out_buf == NULL) {
+        printf("Failed to allocate memory for decompressed image\n");
+        tjDestroy(handle);
+        return -1;
+    }
+
+    // Decompress the JPEG image into the allocated buffer
+    ret = tjDecompress2(handle, img_data, img_size, sw_out_buf, width, 0, height, pixelFormat, 0);
+    if (ret < 0) {
+        printf("Failed to decompress image: %s\n", tjGetErrorStr());
+        free(sw_out_buf);
+        tjDestroy(handle);
+        return -1;
+    }
+
+    // Fill the image_buffer_t struct with the decompressed image details
+    image->width = width;
+    image->height = height;
+    image->size = sw_out_size;
+    image->virt_addr = sw_out_buf;
+    image->format = IMAGE_FORMAT_RGB888;
+
+    // Clean up and return success
+    tjDestroy(handle);
+    return 0;
+}
+
 
 static int read_image_raw(const char* path, image_buffer_t* image)
 {
